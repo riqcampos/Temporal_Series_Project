@@ -13,6 +13,7 @@ from pmdarima import auto_arima
 from prophet import Prophet
 from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -71,16 +72,16 @@ class AnalisadorSerieTemporalCompleto:
         """Validações rigorosas dos dados de entrada."""
         # Verificar valores negativos
         if (self.df[self.nome_valor] < 0).any():
-            print("⚠️  AVISO: Série contém valores negativos")
+            print("AVISO: Série contém valores negativos")
         
         # Verificar valores zero
         zeros = (self.df[self.nome_valor] == 0).sum()
         if zeros > 0:
-            print(f"⚠️  AVISO: {zeros} valores zero encontrados ({zeros/len(self.df)*100:.1f}%)")
+            print(f"AVISO: {zeros} valores zero encontrados ({zeros/len(self.df)*100:.1f}%)")
         
         # Verificar duplicatas no índice
         if self.df.index.duplicated().any():
-            print("⚠️  AVISO: Índice contém datas duplicadas. Removendo duplicatas...")
+            print("AVISO: Índice contém datas duplicadas. Removendo duplicatas...")
             self.df = self.df[~self.df.index.duplicated(keep='first')]
         
         # Definir frequência
@@ -135,7 +136,7 @@ class AnalisadorSerieTemporalCompleto:
         """Estatísticas descritivas detalhadas."""
         y = self.df[self.nome_valor]
         
-        print("📊 ESTATÍSTICAS DESCRITIVAS")
+        print("ESTATÍSTICAS DESCRITIVAS")
         print("-" * 50)
         stats_dict = {
             'Média': y.mean(),
@@ -273,7 +274,7 @@ class AnalisadorSerieTemporalCompleto:
         
         # Teste de normalidade
         jb_stat, jb_pval, skew, kurtosis = jarque_bera(y.dropna())
-        print(f"📊 TESTE DE NORMALIDADE (Jarque-Bera)")
+        print(f"TESTE DE NORMALIDADE (Jarque-Bera)")
         print(f"Estatística: {jb_stat:.4f}")
         print(f"P-valor: {jb_pval:.4f}")
         print(f"Conclusão: {'Distribuição NORMAL' if jb_pval > 0.05 else 'Distribuição NÃO-NORMAL'} (α=0.05)\n")
@@ -295,7 +296,7 @@ class AnalisadorSerieTemporalCompleto:
         z_scores = np.abs(stats.zscore(y))
         outliers_zscore = y[z_scores > 3]
         
-        print(f"🔍 DETECÇÃO DE OUTLIERS")
+        print(f"DETECÇÃO DE OUTLIERS")
         print(f"Método IQR: {len(outliers_iqr)} outliers ({len(outliers_iqr)/len(y)*100:.2f}%)")
         print(f"Método Z-Score (>3): {len(outliers_zscore)} outliers ({len(outliers_zscore)/len(y)*100:.2f}%)")
         
@@ -390,12 +391,12 @@ class AnalisadorSerieTemporalCompleto:
             strength_seasonal_add = 1 - (decomp_add.resid.var() / (decomp_add.resid + decomp_add.seasonal).var())
             strength_trend_add = 1 - (decomp_add.resid.var() / (decomp_add.resid + decomp_add.trend).var())
             
-            print(f"📊 FORÇA DOS COMPONENTES (Aditivo)")
+            print(f"FORÇA DOS COMPONENTES (Aditivo)")
             print(f"Força da Sazonalidade: {strength_seasonal_add:.4f}")
             print(f"Força da Tendência: {strength_trend_add:.4f}\n")
             
         except Exception as e:
-            print(f"⚠️  Não foi possível realizar decomposição clássica: {e}\n")
+            print(f"Não foi possível realizar decomposição clássica: {e}\n")
         
         # Decomposição STL (mais robusta)
         try:
@@ -432,7 +433,7 @@ class AnalisadorSerieTemporalCompleto:
                 plt.tight_layout()
                 plt.show()
         except Exception as e:
-            print(f"⚠️  Não foi possível realizar decomposição STL: {e}\n")
+            print(f"Não foi possível realizar decomposição STL: {e}\n")
 
     # ==================== TESTES DE ESTACIONARIEDADE ====================
     
@@ -445,7 +446,7 @@ class AnalisadorSerieTemporalCompleto:
         y = self.y_train.dropna()
         
         # 1. Teste ADF (Augmented Dickey-Fuller)
-        print("📊 TESTE ADF (Augmented Dickey-Fuller)")
+        print("TESTE ADF (Augmented Dickey-Fuller)")
         print("-" * 50)
         adf_result = adfuller(y, autolag='AIC')
         print(f"Estatística ADF: {adf_result[0]:.6f}")
@@ -457,12 +458,12 @@ class AnalisadorSerieTemporalCompleto:
             print(f"  {key}: {value:.4f}")
         
         if adf_result[1] < 0.05:
-            print("✓ Conclusão: Série é ESTACIONÁRIA (rejeita H0: raiz unitária)")
+            print("Conclusão: Série é ESTACIONÁRIA (rejeita H0: raiz unitária)")
         else:
-            print("✗ Conclusão: Série é NÃO-ESTACIONÁRIA (não rejeita H0)")
+            print("Conclusão: Série é NÃO-ESTACIONÁRIA (não rejeita H0)")
         
         # 2. Teste KPSS
-        print(f"\n📊 TESTE KPSS (Kwiatkowski-Phillips-Schmidt-Shin)")
+        print(f"\nTESTE KPSS (Kwiatkowski-Phillips-Schmidt-Shin)")
         print("-" * 50)
         kpss_result = kpss(y, regression='ct', nlags='auto')
         print(f"Estatística KPSS: {kpss_result[0]:.6f}")
@@ -473,18 +474,18 @@ class AnalisadorSerieTemporalCompleto:
             print(f"  {key}: {value:.4f}")
         
         if kpss_result[1] > 0.05:
-            print("✓ Conclusão: Série é ESTACIONÁRIA (não rejeita H0: estacionária)")
+            print("Conclusão: Série é ESTACIONÁRIA (não rejeita H0: estacionária)")
         else:
-            print("✗ Conclusão: Série é NÃO-ESTACIONÁRIA (rejeita H0)")
+            print("Conclusão: Série é NÃO-ESTACIONÁRIA (rejeita H0)")
         
         print(f"\n{'='*50}")
         print("INTERPRETAÇÃO COMBINADA:")
         if adf_result[1] < 0.05 and kpss_result[1] > 0.05:
-            print("✓ Série é ESTACIONÁRIA (ambos os testes concordam)")
+            print("Série é ESTACIONÁRIA (ambos os testes concordam)")
         elif adf_result[1] >= 0.05 and kpss_result[1] <= 0.05:
-            print("✗ Série é NÃO-ESTACIONÁRIA (ambos os testes concordam)")
+            print("Série é NÃO-ESTACIONÁRIA (ambos os testes concordam)")
         else:
-            print("⚠️  Resultados INCONCLUSIVOS (testes discordam)")
+            print("Resultados INCONCLUSIVOS (testes discordam)")
         print(f"{'='*50}\n")
         
         # Visualização ACF e PACF
@@ -535,7 +536,7 @@ class AnalisadorSerieTemporalCompleto:
         print(f"{'='*80}\n")
         
         # Ajustar cada modelo
-        self.aplicar_naive_baseline(horizonte)
+        self.aplicar_random_forest(horizonte)
         self.aplicar_holt_winters(horizonte)
         self.aplicar_sarima(horizonte)
         self.aplicar_prophet(horizonte)
@@ -544,40 +545,118 @@ class AnalisadorSerieTemporalCompleto:
         self._comparar_modelos()
         self._ranking_modelos()
 
-    def aplicar_naive_baseline(self, horizonte):
-        """Modelos baseline (Naive e Sazonal Naive)."""
-        print("📊 MODELOS BASELINE")
+    def aplicar_random_forest(self, horizonte):
+        """Random Forest com features de série temporal (lags e features temporais)."""
+        print("RANDOM FOREST REGRESSOR")
         print("-" * 50)
         
         y_train = self.y_train
         y_test = self.y_test
         
-        # Naive: última observação
-        naive_pred = pd.Series([y_train.iloc[-1]] * len(y_test), index=y_test.index)
-        
-        # Seasonal Naive: última observação sazonal
-        if len(y_train) >= 12:
-            seasonal_naive_pred = pd.Series(
-                [y_train.iloc[-(12 - (i % 12))] for i in range(len(y_test))],
-                index=y_test.index
+        try:
+            # Criar features de série temporal
+            def criar_features(data, n_lags=12):
+                df = pd.DataFrame(index=data.index)
+                df['valor'] = data.values
+                
+                # Lags
+                for i in range(1, n_lags + 1):
+                    df[f'lag_{i}'] = data.shift(i)
+                
+                # Rolling statistics
+                for window in [3, 6, 12]:
+                    df[f'rolling_mean_{window}'] = data.rolling(window=window).mean()
+                    df[f'rolling_std_{window}'] = data.rolling(window=window).std()
+                
+                # Features temporais
+                df['mes'] = data.index.month
+                df['trimestre'] = data.index.quarter
+                df['ano'] = data.index.year
+                
+                # Tendência
+                df['tendencia'] = np.arange(len(data))
+                
+                return df
+            
+            # Criar features para treino
+            df_train = criar_features(y_train)
+            df_train = df_train.dropna()
+            
+            X_train = df_train.drop('valor', axis=1)
+            y_train_rf = df_train['valor']
+            
+            # Treinar modelo
+            rf_model = RandomForestRegressor(
+                n_estimators=200,
+                max_depth=15,
+                min_samples_split=5,
+                min_samples_leaf=2,
+                random_state=42,
+                n_jobs=-1
             )
-        else:
-            seasonal_naive_pred = naive_pred.copy()
-        
-        # Armazenar previsões
-        self.previsoes['Naive'] = naive_pred
-        self.previsoes['Seasonal_Naive'] = seasonal_naive_pred
-        
-        # Calcular métricas
-        self.metricas['Naive'] = self._calcular_metricas(y_test, naive_pred)
-        self.metricas['Seasonal_Naive'] = self._calcular_metricas(y_test, seasonal_naive_pred)
-        
-        print("✓ Naive Forecast concluído")
-        print("✓ Seasonal Naive Forecast concluído\n")
+            
+            rf_model.fit(X_train, y_train_rf)
+            
+            # Prever no conjunto de teste
+            predicoes_test = []
+            ultimo_treino = y_train.copy()
+            
+            for i in range(len(y_test)):
+                # Criar features para próxima previsão
+                df_pred = criar_features(ultimo_treino)
+                df_pred = df_pred.dropna()
+                X_pred = df_pred.iloc[[-1]].drop('valor', axis=1)
+                
+                # Prever
+                pred = rf_model.predict(X_pred)[0]
+                predicoes_test.append(pred)
+                
+                # Atualizar série com valor real para próxima iteração
+                novo_index = pd.DatetimeIndex([y_test.index[i]])
+                novo_valor = pd.Series([y_test.iloc[i]], index=novo_index)
+                ultimo_treino = pd.concat([ultimo_treino, novo_valor])
+            
+            forecast_series = pd.Series(predicoes_test, index=y_test.index)
+            
+            # Calcular intervalos de confiança (usando desvio padrão das árvores)
+            predicoes_arvores = np.array([tree.predict(X_train) for tree in rf_model.estimators_])
+            std_pred = np.std(predicoes_arvores, axis=0).mean()
+            
+            forecast_lower = forecast_series - 1.96 * std_pred
+            forecast_upper = forecast_series + 1.96 * std_pred
+            
+            # Armazenar
+            self.modelos['RandomForest'] = rf_model
+            self.previsoes['RandomForest'] = forecast_series
+            self.previsoes['RandomForest_lower'] = forecast_lower
+            self.previsoes['RandomForest_upper'] = forecast_upper
+            self.metricas['RandomForest'] = self._calcular_metricas(y_test, forecast_series)
+            
+            # Feature importance
+            feature_importance = pd.DataFrame({
+                'feature': X_train.columns,
+                'importance': rf_model.feature_importances_
+            }).sort_values('importance', ascending=False)
+            
+            print(f"Random Forest treinado com sucesso")
+            print(f"  Número de árvores: {rf_model.n_estimators}")
+            print(f"  Features mais importantes:")
+            for idx, row in feature_importance.head(5).iterrows():
+                print(f"    {row['feature']}: {row['importance']:.4f}")
+            
+            # Diagnóstico de resíduos
+            fitted = rf_model.predict(X_train)
+            residuos = y_train_rf - fitted
+            self._diagnostico_residuos(residuos, fitted, 'Random Forest')
+            
+            print("Random Forest ajustado com sucesso\n")
+            
+        except Exception as e:
+            print(f"Erro no Random Forest: {e}\n")
 
     def aplicar_holt_winters(self, horizonte):
         """Suavização Exponencial de Holt-Winters (Triple Exponential Smoothing)."""
-        print("📊 HOLT-WINTERS (SUAVIZAÇÃO EXPONENCIAL)")
+        print("HOLT-WINTERS (SUAVIZAÇÃO EXPONENCIAL)")
         print("-" * 50)
         
         y_train = self.y_train
@@ -643,7 +722,7 @@ class AnalisadorSerieTemporalCompleto:
 
     def aplicar_sarima(self, horizonte):
         """SARIMA com seleção automática de parâmetros."""
-        print("📊 SARIMA (AUTO-ARIMA)")
+        print("SARIMA (AUTO-ARIMA)")
         print("-" * 50)
         
         y_train = self.y_train
@@ -671,7 +750,7 @@ class AnalisadorSerieTemporalCompleto:
                 n_fits=50
             )
             
-            print(f"✓ Melhor modelo: ARIMA{modelo_sarima.order} x {modelo_sarima.seasonal_order}[{m}]")
+            print(f"Melhor modelo: ARIMA{modelo_sarima.order} x {modelo_sarima.seasonal_order}[{m}]")
             print(f"  AIC: {modelo_sarima.aic():.2f}")
             print(f"  BIC: {modelo_sarima.bic():.2f}")
             
@@ -696,14 +775,14 @@ class AnalisadorSerieTemporalCompleto:
             residuos = modelo_sarima.resid()
             self._diagnostico_residuos(residuos, fitted_series, 'SARIMA')
             
-            print("✓ SARIMA ajustado com sucesso\n")
+            print("SARIMA ajustado com sucesso\n")
             
         except Exception as e:
-            print(f"✗ Erro no SARIMA: {e}\n")
+            print(f"Erro no SARIMA: {e}\n")
 
     def aplicar_prophet(self, horizonte):
-        """Facebook Prophet com detecção automática de tendências e sazonalidade."""
-        print("📊 PROPHET (FACEBOOK)")
+        """Prophet com detecção automática de tendências e sazonalidade."""
+        print("PROPHET")
         print("-" * 50)
         
         try:
@@ -754,10 +833,10 @@ class AnalisadorSerieTemporalCompleto:
             # Componentes do Prophet
             self._plotar_componentes_prophet(model, forecast)
             
-            print("✓ Prophet ajustado com sucesso\n")
+            print("Prophet ajustado com sucesso\n")
             
         except Exception as e:
-            print(f"✗ Erro no Prophet: {e}\n")
+            print(f"Erro no Prophet: {e}\n")
 
     def _calcular_metricas(self, y_true, y_pred):
         """Calcula métricas abrangentes de performance."""
@@ -876,21 +955,21 @@ class AnalisadorSerieTemporalCompleto:
         plt.show()
         
         # Testes estatísticos
-        print(f"\n📊 TESTES ESTATÍSTICOS DOS RESÍDUOS - {nome_modelo}")
+        print(f"\nTESTES ESTATÍSTICOS DOS RESÍDUOS - {nome_modelo}")
         print("-" * 60)
         
         # Teste de Normalidade (Jarque-Bera)
         jb_stat, jb_pval, _, _ = jarque_bera(residuos)
         print(f"Teste Jarque-Bera (Normalidade):")
         print(f"  Estatística: {jb_stat:.4f} | P-valor: {jb_pval:.4f}")
-        print(f"  {'✓ Resíduos NORMAIS' if jb_pval > 0.05 else '✗ Resíduos NÃO-NORMAIS'}")
+        print(f"  {'Resíduos NORMAIS' if jb_pval > 0.05 else '✗ Resíduos NÃO-NORMAIS'}")
         
         # Teste Ljung-Box (Autocorrelação)
         lb_test = acorr_ljungbox(residuos, lags=min(10, len(residuos)//5), return_df=True)
         lb_pval_min = lb_test['lb_pvalue'].min()
         print(f"\nTeste Ljung-Box (Autocorrelação):")
         print(f"  P-valor mínimo: {lb_pval_min:.4f}")
-        print(f"  {'✓ SEM autocorrelação (Ruído Branco)' if lb_pval_min > 0.05 else '✗ COM autocorrelação'}")
+        print(f"  {'SEM autocorrelação (Ruído Branco)' if lb_pval_min > 0.05 else '✗ COM autocorrelação'}")
         
         # Estatísticas descritivas
         print(f"\nEstatísticas dos Resíduos:")
@@ -911,7 +990,7 @@ class AnalisadorSerieTemporalCompleto:
     def _comparar_modelos(self):
         """Comparação visual de todos os modelos."""
         if not self.previsoes:
-            print("⚠️  Nenhum modelo ajustado ainda.")
+            print("Nenhum modelo ajustado ainda.")
             return
         
         print(f"\n{'='*80}")
@@ -972,7 +1051,7 @@ class AnalisadorSerieTemporalCompleto:
     def _ranking_modelos(self):
         """Ranking e tabela de métricas de todos os modelos."""
         if not self.metricas:
-            print("⚠️  Nenhuma métrica calculada ainda.")
+            print("Nenhuma métrica calculada ainda.")
             return
         
         print(f"\n{'='*80}")
@@ -997,14 +1076,14 @@ class AnalisadorSerieTemporalCompleto:
         df_metricas = df_metricas.sort_values('Rank_Médio')
         
         # Exibir tabela
-        print("📊 TABELA DE MÉTRICAS (ordenada por melhor performance)")
+        print("TABELA DE MÉTRICAS (ordenada por melhor performance)")
         print("=" * 100)
         print(df_metricas[['MAE', 'RMSE', 'MAPE', 'SMAPE', 'R²', 'Rank_Médio']].to_string())
         print("=" * 100)
         
         # Melhor modelo
         melhor_modelo = df_metricas.index[0]
-        print(f"\n🏆 MELHOR MODELO: {melhor_modelo}")
+        print(f"\nMELHOR MODELO: {melhor_modelo}")
         print(f"   MAE: {df_metricas.loc[melhor_modelo, 'MAE']:.4f}")
         print(f"   RMSE: {df_metricas.loc[melhor_modelo, 'RMSE']:.4f}")
         print(f"   MAPE: {df_metricas.loc[melhor_modelo, 'MAPE']:.2f}%")
@@ -1053,6 +1132,203 @@ class AnalisadorSerieTemporalCompleto:
         plt.tight_layout()
         plt.show()
 
+    # ==================== PREVISÃO FUTURA ====================
+    
+    def prever_futuro(self, n_periodos):
+        """
+        Gera previsões para períodos futuros usando todos os modelos ajustados.
+        
+        Args:
+            n_periodos: Número de períodos futuros para prever
+        
+        Returns:
+            DataFrame com previsões de todos os modelos
+        """
+        print(f"\n{'='*80}")
+        print(f"PREVISÃO FUTURA - {n_periodos} PERÍODOS À FRENTE")
+        print(f"{'='*80}\n")
+        
+        # Criar índice futuro
+        ultimo_periodo = self.df.index[-1]
+        if self.freq == 'MS':
+            freq_offset = pd.DateOffset(months=1)
+        elif self.freq == 'Q':
+            freq_offset = pd.DateOffset(months=3)
+        elif self.freq == 'D':
+            freq_offset = pd.DateOffset(days=1)
+        elif self.freq == 'W':
+            freq_offset = pd.DateOffset(weeks=1)
+        elif self.freq == 'Y':
+            freq_offset = pd.DateOffset(years=1)
+        else:
+            freq_offset = pd.DateOffset(months=1)
+        
+        datas_futuras = pd.date_range(
+            start=ultimo_periodo + freq_offset,
+            periods=n_periodos,
+            freq=self.freq
+        )
+        
+        previsoes_futuras = pd.DataFrame(index=datas_futuras)
+        
+        # Random Forest
+        if 'RandomForest' in self.modelos:
+            print("Gerando previsões com Random Forest...")
+            try:
+                rf_model = self.modelos['RandomForest']
+                serie_completa = self.df[self.nome_valor].copy()
+                
+                predicoes_rf = []
+                for i in range(n_periodos):
+                    # Criar features
+                    def criar_features_single(data):
+                        df = pd.DataFrame(index=[data.index[-1]])
+                        
+                        # Lags
+                        for lag in range(1, 13):
+                            df[f'lag_{lag}'] = data.iloc[-lag] if len(data) >= lag else data.iloc[0]
+                        
+                        # Rolling statistics
+                        for window in [3, 6, 12]:
+                            if len(data) >= window:
+                                df[f'rolling_mean_{window}'] = data.iloc[-window:].mean()
+                                df[f'rolling_std_{window}'] = data.iloc[-window:].std()
+                            else:
+                                df[f'rolling_mean_{window}'] = data.mean()
+                                df[f'rolling_std_{window}'] = data.std()
+                        
+                        # Features temporais
+                        next_date = data.index[-1] + freq_offset
+                        df['mes'] = next_date.month
+                        df['trimestre'] = next_date.quarter
+                        df['ano'] = next_date.year
+                        df['tendencia'] = len(data) + i
+                        
+                        return df
+                    
+                    X_pred = criar_features_single(serie_completa)
+                    pred = rf_model.predict(X_pred)[0]
+                    predicoes_rf.append(pred)
+                    
+                    # Adicionar previsão à série
+                    nova_data = datas_futuras[i]
+                    serie_completa = pd.concat([
+                        serie_completa,
+                        pd.Series([pred], index=[nova_data])
+                    ])
+                
+                previsoes_futuras['RandomForest'] = predicoes_rf
+                print("✓ Random Forest concluído")
+                
+            except Exception as e:
+                print(f"✗ Erro no Random Forest: {e}")
+        
+        # Holt-Winters
+        if 'HoltWinters' in self.modelos:
+            print("Gerando previsões com Holt-Winters...")
+            try:
+                hw_model = self.modelos['HoltWinters']
+                previsoes_hw = hw_model.forecast(n_periodos)
+                previsoes_futuras['HoltWinters'] = previsoes_hw
+                print("✓ Holt-Winters concluído")
+            except Exception as e:
+                print(f"✗ Erro no Holt-Winters: {e}")
+        
+        # SARIMA
+        if 'SARIMA' in self.modelos:
+            print("Gerando previsões com SARIMA...")
+            try:
+                sarima_model = self.modelos['SARIMA']
+                previsoes_sarima = sarima_model.predict(n_periods=n_periodos)
+                previsoes_futuras['SARIMA'] = previsoes_sarima
+                print("✓ SARIMA concluído")
+            except Exception as e:
+                print(f"✗ Erro no SARIMA: {e}")
+        
+        # Prophet
+        if 'Prophet' in self.modelos:
+            print("Gerando previsões com Prophet...")
+            try:
+                prophet_model = self.modelos['Prophet']
+                future = prophet_model.make_future_dataframe(periods=n_periodos, freq=self.freq)
+                forecast = prophet_model.predict(future)
+                previsoes_prophet = forecast.tail(n_periodos)['yhat'].values
+                previsoes_futuras['Prophet'] = previsoes_prophet
+                print("✓ Prophet concluído")
+            except Exception as e:
+                print(f"✗ Erro no Prophet: {e}")
+        
+        # Visualização
+        self._plotar_previsoes_futuras(previsoes_futuras, n_periodos)
+        
+        # Estatísticas
+        print(f"\n{'='*80}")
+        print("RESUMO DAS PREVISÕES FUTURAS")
+        print(f"{'='*80}\n")
+        print(previsoes_futuras.round(2))
+        print("\nEstatísticas por período:")
+        print(previsoes_futuras.describe().round(2))
+        
+        return previsoes_futuras
+    
+    def _plotar_previsoes_futuras(self, previsoes_futuras, n_periodos):
+        """Visualiza as previsões futuras de todos os modelos."""
+        fig, axes = plt.subplots(2, 1, figsize=(18, 12))
+        
+        y_historico = self.df[self.nome_valor]
+        
+        # Gráfico 1: Série completa com previsões
+        ax1 = axes[0]
+        ax1.plot(y_historico.index, y_historico, label='Histórico', 
+                linewidth=2.5, color='black', alpha=0.7)
+        
+        colors = ['#E63946', '#F4A261', '#2A9D8F', '#264653']
+        for i, col in enumerate(previsoes_futuras.columns):
+            ax1.plot(previsoes_futuras.index, previsoes_futuras[col], 
+                    label=f'{col} (Futuro)', linewidth=2.5, 
+                    color=colors[i % len(colors)], marker='o', markersize=6)
+        
+        ax1.axvline(y_historico.index[-1], color='red', linestyle='--', 
+                   linewidth=2, alpha=0.7, label='Início das Previsões')
+        ax1.fill_between(previsoes_futuras.index, 
+                        previsoes_futuras.min(axis=1), 
+                        previsoes_futuras.max(axis=1),
+                        alpha=0.2, color='gray', label='Range das Previsões')
+        
+        ax1.set_title(f'Previsões Futuras - {n_periodos} Períodos', 
+                     fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Valor')
+        ax1.legend(loc='best')
+        ax1.grid(True, alpha=0.3)
+        
+        # Gráfico 2: Zoom nas previsões futuras
+        ax2 = axes[1]
+        
+        # Incluir últimos períodos históricos para contexto
+        n_contexto = min(12, len(y_historico))
+        contexto = y_historico.iloc[-n_contexto:]
+        
+        ax2.plot(contexto.index, contexto, label='Últimos Valores Históricos', 
+                linewidth=2.5, color='black', alpha=0.7, marker='o')
+        
+        for i, col in enumerate(previsoes_futuras.columns):
+            ax2.plot(previsoes_futuras.index, previsoes_futuras[col], 
+                    label=col, linewidth=2.5, color=colors[i % len(colors)], 
+                    marker='s', markersize=7)
+        
+        ax2.axvline(y_historico.index[-1], color='red', linestyle='--', 
+                   linewidth=2, alpha=0.7)
+        
+        ax2.set_title('Zoom: Transição Histórico → Futuro', 
+                     fontsize=14, fontweight='bold')
+        ax2.set_xlabel('Data')
+        ax2.set_ylabel('Valor')
+        ax2.legend(loc='best')
+        ax2.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.show()
+
     # ==================== RELATÓRIO FINAL ====================
     
     def gerar_relatorio_executivo(self):
@@ -1063,7 +1339,7 @@ class AnalisadorSerieTemporalCompleto:
         
         y = self.df[self.nome_valor]
         
-        print("📋 RESUMO DA ANÁLISE")
+        print("RESUMO DA ANÁLISE")
         print("-" * 80)
         print(f"Variável Analisada: {self.nome_valor}")
         print(f"Período: {y.index.min().strftime('%Y-%m-%d')} até {y.index.max().strftime('%Y-%m-%d')}")
@@ -1093,7 +1369,7 @@ class AnalisadorSerieTemporalCompleto:
             # Próximas previsões
             if melhor_modelo in self.previsoes:
                 prox_valor = self.previsoes[melhor_modelo].iloc[0]
-                print(f"\n📈 PRÓXIMA PREVISÃO: {prox_valor:.2f}")
+                print(f"\nPRÓXIMA PREVISÃO: {prox_valor:.2f}")
                 
                 if f'{melhor_modelo}_lower' in self.previsoes:
                     lower = self.previsoes[f'{melhor_modelo}_lower'].iloc[0]
@@ -1102,15 +1378,6 @@ class AnalisadorSerieTemporalCompleto:
                     print(f"   Cenário Pessimista: {lower:.2f}")
                     print(f"   Cenário Mais Provável: {prox_valor:.2f}")
                     print(f"   Cenário Otimista: {upper:.2f}")
-        
-        print("\n" + "=" * 80)
-        print("📌 RECOMENDAÇÕES E PRÓXIMOS PASSOS")
-        print("=" * 80)
-        print("1. Monitorar os valores reais vs previstos mensalmente")
-        print("2. Reavaliar o modelo a cada 3-6 meses com novos dados")
-        print("3. Investigar causas de outliers identificados")
-        print("4. Considerar variáveis externas que possam melhorar as previsões")
-        print("=" * 80 + "\n")
 
     def dashboard_completo(self):
         """Dashboard executivo com KPIs principais."""
@@ -1246,7 +1513,7 @@ class AnalisadorSerieTemporalCompleto:
         t_stat, p_valor = stats.ttest_ind(antes, depois)
         diferenca_pct = ((depois.mean() - antes.mean()) / antes.mean()) * 100
         
-        print(f"\n📊 TESTE DE HIPÓTESE (t-test)")
+        print(f"\nTESTE DE HIPÓTESE (t-test)")
         print(f"Estatística t: {t_stat:.4f}")
         print(f"P-valor: {p_valor:.4f}")
         print(f"Diferença: {diferenca_pct:+.1f}%")
@@ -1294,7 +1561,7 @@ class AnalisadorSerieTemporalCompleto:
         n = len(y)
         tamanho_teste = n // (n_splits + 1)
         
-        resultados = {modelo: [] for modelo in ['SARIMA', 'HoltWinters', 'Prophet']}
+        resultados = {modelo: [] for modelo in ['RandomForest', 'SARIMA', 'HoltWinters', 'Prophet']}
         
         print(f"Realizando {n_splits} splits temporais...")
         print(f"Tamanho do teste por split: {tamanho_teste} observações\n")
@@ -1305,6 +1572,45 @@ class AnalisadorSerieTemporalCompleto:
             test = y.iloc[split_point:split_point + tamanho_teste]
             
             print(f"Split {i+1}/{n_splits}: Treino até {train.index[-1].strftime('%Y-%m-%d')}")
+            
+            # Random Forest
+            try:
+                def criar_features_cv(data, n_lags=12):
+                    df = pd.DataFrame(index=data.index)
+                    df['valor'] = data.values
+                    for lag in range(1, n_lags + 1):
+                        df[f'lag_{lag}'] = data.shift(lag)
+                    for window in [3, 6, 12]:
+                        df[f'rolling_mean_{window}'] = data.rolling(window=window).mean()
+                        df[f'rolling_std_{window}'] = data.rolling(window=window).std()
+                    df['mes'] = data.index.month
+                    df['trimestre'] = data.index.quarter
+                    df['ano'] = data.index.year
+                    df['tendencia'] = np.arange(len(data))
+                    return df.dropna()
+                
+                df_train_rf = criar_features_cv(train)
+                X_train_rf = df_train_rf.drop('valor', axis=1)
+                y_train_rf = df_train_rf['valor']
+                
+                rf = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+                rf.fit(X_train_rf, y_train_rf)
+                
+                predicoes_rf = []
+                ultimo_treino = train.copy()
+                for j in range(len(test)):
+                    df_pred = criar_features_cv(ultimo_treino)
+                    X_pred = df_pred.iloc[[-1]].drop('valor', axis=1)
+                    pred_val = rf.predict(X_pred)[0]
+                    predicoes_rf.append(pred_val)
+                    novo_index = pd.DatetimeIndex([test.index[j]])
+                    novo_valor = pd.Series([test.iloc[j]], index=novo_index)
+                    ultimo_treino = pd.concat([ultimo_treino, novo_valor])
+                
+                mape = mean_absolute_percentage_error(test, predicoes_rf) * 100
+                resultados['RandomForest'].append(mape)
+            except:
+                pass
             
             # SARIMA
             try:
@@ -1340,33 +1646,37 @@ class AnalisadorSerieTemporalCompleto:
                 resultados['Prophet'].append(mape)
             except:
                 pass
-        
-        # Resumo
-        print("\n📊 RESULTADOS DA VALIDAÇÃO CRUZADA")
-        print("=" * 60)
-        for modelo, erros in resultados.items():
-            if erros:
-                print(f"{modelo:.<30} MAPE Médio: {np.mean(erros):.2f}% (±{np.std(erros):.2f}%)")
-        print("=" * 60 + "\n")
-        
-        # Visualização
-        fig, ax = plt.subplots(figsize=(12, 6))
-        data_plot = [erros for erros in resultados.values() if erros]
-        labels = [modelo for modelo, erros in resultados.items() if erros]
-        
-        bp = ax.boxplot(data_plot, labels=labels, patch_artist=True,
-                       boxprops=dict(facecolor='#4ECDC4', alpha=0.7),
-                       medianprops=dict(color='red', linewidth=2))
-        
-        ax.set_ylabel('MAPE (%)', fontweight='bold')
-        ax.set_title('Validação Cruzada Temporal - Distribuição de Erros', 
-                    fontsize=14, fontweight='bold')
-        ax.grid(True, alpha=0.3, axis='y')
-        plt.tight_layout()
-        plt.show()
+            # Resumo
+            print("\nRESULTADOS DA VALIDAÇÃO CRUZADA")
+            print("=" * 60)
+            for modelo, erros in resultados.items():
+                if erros:
+                    print(f"{modelo:.<30} MAPE Médio: {np.mean(erros):.2f}% (±{np.std(erros):.2f}%)")
+            print("=" * 60 + "\n")
+            
+            # Visualização
+            fig, ax = plt.subplots(figsize=(12, 6))
+            data_plot = [erros for erros in resultados.values() if erros]
+            labels = [modelo for modelo, erros in resultados.items() if erros]
+            
+            bp = ax.boxplot(data_plot, labels=labels, patch_artist=True,
+                        boxprops=dict(facecolor='#4ECDC4', alpha=0.7),
+                        medianprops=dict(color='red', linewidth=2))
+            
+            ax.set_ylabel('MAPE (%)', fontweight='bold')
+            ax.set_title('Validação Cruzada Temporal - Distribuição de Erros', 
+                        fontsize=14, fontweight='bold')
+            ax.grid(True, alpha=0.3, axis='y')
+            plt.tight_layout()
+            plt.show()
 
-    def analise_completa(self):
-        """Executa pipeline completo de análise."""
+    def analise_completa(self, periodos_futuros=12):
+        """
+        Executa pipeline completo de análise.
+        
+        Args:
+            periodos_futuros: Número de períodos futuros para prever (default: 12)
+        """
         print("\n" + "="*80)
         print("INICIANDO ANÁLISE COMPLETA DE SÉRIE TEMPORAL")
         print("="*80)
@@ -1380,12 +1690,17 @@ class AnalisadorSerieTemporalCompleto:
         # 3. Modelagem
         self.ajustar_todos_modelos()
         
-        # 4. Dashboard
+        # 4. Previsões Futuras
+        previsoes_futuras = self.prever_futuro(periodos_futuros)
+        
+        # 5. Dashboard
         self.dashboard_completo()
         
-        # 5. Relatório
+        # 6. Relatório
         self.gerar_relatorio_executivo()
         
         print("\n" + "="*80)
-        print("✓ ANÁLISE COMPLETA FINALIZADA")
+        print("ANÁLISE COMPLETA FINALIZADA")
         print("="*80 + "\n")
+        
+        return previsoes_futuras
